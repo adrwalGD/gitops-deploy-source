@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-web-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-web-app
+  template:
+    metadata:
+      labels:
+        app: my-web-app
+    spec:
+      # Reference the image pull secret so Kubernetes can authenticate to the registry
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: my-web-app
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        image: adrwalgitops.azurecr.io/my-web-app:425ead16ada448016ed586283482ab6e9c67c70b
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
