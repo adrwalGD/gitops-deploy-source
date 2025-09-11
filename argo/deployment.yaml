@@ -27,5 +27,4 @@ spec:
         image: adrwalgitops.azurecr.io/my-web-app:425ead16ada448016ed586283482ab6e9c67c70b
         imagePullPolicy: Always
         ports:
-        - containerPort: 8080
-
+        - containerPort: 3001
