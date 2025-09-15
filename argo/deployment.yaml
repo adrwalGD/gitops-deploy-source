@@ -14,7 +14,7 @@ spec:
     spec:
       # Reference the image pull secret so Kubernetes can authenticate to the registry
       imagePullSecrets:
-      - name: regcred
+      - name: acr-secret
       containers:
       - name: my-web-app
         resources:
@@ -24,7 +24,7 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "500m"
-        image: adrwalgitops.azurecr.io/my-web-app:dd1451d15d4bdcdf99f2f4070189b8307729aed1
+        image: adrwalgitops.azurecr.io/my-web-app:a91794b56e6b6c96d8b96ef9637ad10227a7c9da
         imagePullPolicy: Always
         ports:
         - containerPort: 3001

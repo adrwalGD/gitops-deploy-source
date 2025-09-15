@@ -8,18 +8,6 @@ terraform {
       source  = "hashicorp/helm"
       version = "2.17.0"
     }
-    # kubectl = {
-    #   source  = "gavinbunney/kubectl"
-    #   version = "1.19.0"
-    # }
-    # http = {
-    #   source  = "hashicorp/http"
-    #   version = "~> 3.0"
-    # }
-    # yaml = {
-    #   source  = "hashicorp/yaml"
-    #   version = "~> 2.2"
-    # }
   }
 }
 
@@ -82,95 +70,39 @@ resource "kubernetes_secret" "acr_secret" {
 }
 
 resource "helm_release" "argocd" {
-  # depends_on = [aws_eks_node_group.main]
-  name       = "argocd"
+  name       = "argo-cd"
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
-  version    = "4.5.2"
+  namespace  = kubernetes_namespace.argocd.metadata[0].name
+  version    = "5.51.2"
 
-  namespace = "argocd"
+  depends_on = [
+    kubernetes_namespace.argocd,
+    kubernetes_secret.acr_secret
+  ]
 
-  create_namespace = true
-
-  # set {
-  #   name  = "server.service.type"
-  #   value = "LoadBalancer"
-  # }
-
-  # set {
-  #   name  = "server.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type"
-  #   value = "nlb"
-  # }
+  # Example of customizing values.
+  # For a full list, check the official argo-cd helm chart documentation.
+  values = [
+    <<-EOT
+    server:
+      service:
+        type: LoadBalancer
+    controller:
+      metrics:
+        enabled: true
+    redis:
+      metrics:
+        enabled: true
+    repoServer:
+      metrics:
+        enabled: true
+    EOT
+  ]
 }
 
+resource "kubernetes_manifest" "argo-app" {
+  manifest = yamldecode(file("${path.module}/../argo-app.yaml"))
 
-
-
-# data "http" "argocd_install" {
-#   url = "https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml"
-# }
-
-# data "kubectl_file_documents" "argocd_manifests" {
-#   content = data.http.argocd_install.response_body
-# }
-
-# resource "kubernetes_manifest" "argocd" {
-#   # The for_each meta-argument creates an instance for each YAML document found in the file.
-#   for_each = data.kubectl_file_documents.argocd_manifests.manifests
-
-#   # yamldecode() parses the YAML string from the loop into a Terraform object
-#   # that the manifest attribute can understand.
-#   manifest = yamldecode(each.value)
-
-#   # Ensure the namespace is created before attempting to apply manifests.
-#   depends_on = [kubernetes_namespace.argocd]
-# }
-
-# # 4. Example: Deploy a pod using an image from your ACR
-# resource "kubernetes_manifest" "nginx_deployment" {
-#   manifest = {
-#     "apiVersion" = "apps/v1"
-#     "kind"       = "Deployment"
-#     "metadata" = {
-#       "name"      = "nginx-deployment"
-#       "namespace" = "default"
-#     }
-#     "spec" = {
-#       "replicas" = 2
-#       "selector" = {
-#         "matchLabels" = {
-#           "app" = "nginx"
-#         }
-#       }
-#       "template" = {
-#         "metadata" = {
-#           "labels" = {
-#             "app" = "nginx"
-#           }
-#         }
-#         "spec" = {
-#           # Reference the secret you created above
-#           "imagePullSecrets" = [
-#             {
-#               "name" = kubernetes_secret.acr_secret.metadata[0].name
-#             }
-#           ]
-#           "containers" = [
-#             {
-#               "image" = "${data.terraform_remote_state.infra.outputs.acr_login_server}/nginx:latest" # Assumes you pushed an nginx image to your ACR
-#               "name"  = "nginx"
-#               "ports" = [
-#                 {
-#                   "containerPort" = 80
-#                 }
-#               ]
-#             }
-#           ]
-#         }
-#       }
-#     }
-#   }
-
-#   # Add a dependency to ensure the secret is created before the deployment
-#   depends_on = [kubernetes_secret.acr_secret]
-# }
+  depends_on = [helm_release.argocd]
+}
