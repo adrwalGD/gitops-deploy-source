@@ -106,68 +106,69 @@ resource "azurerm_kubernetes_cluster" "main" {
   role_based_access_control_enabled = true
 }
 
-# resource "kubernetes_namespace" "argocd" {
-#   metadata {
-#     name = "argocd"
-#   }
+resource "kubernetes_namespace" "argocd" {
+  metadata {
+    name = "argocd"
+  }
 
-#   depends_on = [azurerm_kubernetes_cluster.main]
-# }
+  depends_on = [azurerm_kubernetes_cluster.main]
+}
 
-# resource "kubernetes_secret" "acr_secret" {
-#   metadata {
-#     name      = "acr-secret"
-#     namespace = "default"
-#   }
-
-#   # Create the .dockerconfigjson content required by Kubernetes
-#   data = {
-#     ".dockerconfigjson" = jsonencode({
-#       auths = {
-#         (azurerm_container_registry.main.login_server) = {
-#           username = azurerm_container_registry.main.admin_username
-#           password = azurerm_container_registry.main.admin_password
-#           email    = "user@example.com"
-#           auth     = base64encode("${azurerm_container_registry.main.admin_username}:${azurerm_container_registry.main.admin_password}")
-#         }
-#       }
-#     })
-#   }
-
-#   type = "kubernetes.io/dockerconfigjson"
-
-#   depends_on = [azurerm_kubernetes_cluster.main]
-# }
+resource "kubernetes_secret" "acr_secret" {
+  metadata {
+    name      = "acr-secret"
+    namespace = "default"
+  }
 
 
-# resource "helm_release" "argocd" {
-#   name       = "argo-cd"
-#   repository = "https://argoproj.github.io/argo-helm"
-#   chart      = "argo-cd"
-#   namespace  = kubernetes_namespace.argocd.metadata[0].name
-#   version    = "5.51.2"
+  data = {
+    ".dockerconfigjson" = jsonencode({
+      auths = {
+        (azurerm_container_registry.main.login_server) = {
+          username = azurerm_container_registry.main.admin_username
+          password = azurerm_container_registry.main.admin_password
+          email    = "user@example.com"
+          auth     = base64encode("${azurerm_container_registry.main.admin_username}:${azurerm_container_registry.main.admin_password}")
+        }
+      }
+    })
+  }
 
-#   depends_on = [
-#     kubernetes_namespace.argocd,
-#     kubernetes_secret.acr_secret
-#   ]
+  type = "kubernetes.io/dockerconfigjson"
 
-#   # Example of customizing values.
-#   # For a full list, check the official argo-cd helm chart documentation.
-#   values = [
-#     <<-EOT
-#     server:
-#       service:
-#         type: LoadBalancer
-#     controller:
-#       metrics:
-#         enabled: true
-#     redis:
-#       metrics:
-#         enabled: true
-#     repoServer:
-#       metrics:
-#         enabled: true
-#     EOT
-#   ]
-# }
+  depends_on = [azurerm_kubernetes_cluster.main]
+}
+
+
+resource "helm_release" "argocd" {
+  name       = "argo-cd"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argo-cd"
+  namespace  = kubernetes_namespace.argocd.metadata[0].name
+  version    = "5.51.2"
+
+  depends_on = [
+    kubernetes_namespace.argocd,
+    kubernetes_secret.acr_secret,
+    azurerm_kubernetes_cluster.main
+  ]
+
+
+
+  values = [
+    <<-EOT
+    server:
+      service:
+        type: LoadBalancer
+    controller:
+      metrics:
+        enabled: true
+    redis:
+      metrics:
+        enabled: true
+    repoServer:
+      metrics:
+        enabled: true
+    EOT
+  ]
+}
