@@ -24,7 +24,7 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "500m"
-        image: adrwalgitopslhfv.azurecr.io/my-web-app:9022a422a0440332227f9cbe71bc589c81f50ecf
+        image: adrwalgitopslhfv.azurecr.io/my-web-app:2123fe9878c6fe6e051299442302a9670d38ccff
         imagePullPolicy: Always
         ports:
         - containerPort: 3001
